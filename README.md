@@ -597,21 +597,4 @@ func main() {
 	http.ListenAndServe(":3000", r)
 }
 ```
-## Prometheus and Grafana
-Prometheus is a monitoring and alerting toolkit used for recording real-time metrics like, Counter: requestsTotal counts total requests, labeled by HTTP method. Gauge: currentUsers tracks the number of active users. Histogram: requestDuration measures the duration of requests, also labeled by method. Summary: responseSize records the size of responses.
-
-Grafana is an open-source visualization tool that enables users to create interactive and customizable dashboards for monitoring and analyzing metrics. 
-
-Prometheus uses service discovery mechanisms to automatically detect new instances as they scale up or down.
-
-Prometheus scrapes metrics directly from each instance, which requires each application to expose metrics on a specified endpoint.
-
-Instead of scraping individual instances, Prometheus can scrape metrics from the ALB, which balances traffic among all instances. This provides a centralized endpoint for metrics collection.
-
-
-## GRPC
-- gRPC uses HTTP/2 and binary serialization (Protocol Buffers) for high performance and efficiency, It supports bi-directional streaming.
-- REST relies on HTTP/1.1 and text-based formats like JSON, offering simplicity and ease of use for web applications. REST is stateless and leverages standard HTTP methods, making it widely adopted and easy to debug. 
-- Choose gRPC if you need high performance, efficient binary serialization, and streaming capabilities, especially in microservices.
-- Choose REST if you prefer simplicity, human readability, and a stateless architecture that is widely supported.
 
