@@ -597,6 +597,186 @@ func main() {
 	http.ListenAndServe(":3000", r)
 }
 ```
+
+## UNIT TEST
+
+```go
+package myUtils
+
+import (
+	"fmt"
+)
+
+func InnerF(s string) string {
+	return fmt.Sprintf("I am the Utils function %s", s)
+}
+
+```
+```go
+package svc
+
+import (
+	"fmt"
+	myUtils "tests/muUtils"
+)
+
+func MyService(s string) string {
+	fmt.Println("I am the Service")
+	out := myUtils.InnerF(s)
+	fmt.Println("Service is Done")
+	return out
+}
+```
+### Closure for Mocking:-
+```go
+package myUtils
+
+import (
+	"fmt"
+)
+
+var InnerF = func(s string) string {
+	return fmt.Sprintf("I am the Utils function %s", s)
+}
+```
+```go
+
+package tests
+
+import (
+	"fmt"
+	"testing"
+	myUtils "tests/muUtils"
+	"tests/svc"
+)
+
+type Test struct {
+	name     string
+	data     string
+	expected string
+	err      error
+}
+
+func TestMyService(t *testing.T) {
+	tests := []Test{{name: "Test-1", data: "My test 1", expected: "My test 1", err: nil}, {name: "Test-2", data: "My test 2", expected: "My test 2", err: nil}, {name: "Test-3", data: "My test 3", expected: "My test 3", err: nil}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			myUtils.InnerF = func(s string) string {
+				fmt.Println("MOCKED CALLING")
+				return fmt.Sprintf("I am the MOCKED function %s", s)
+			}
+			out := svc.MyService(tt.data)
+			fmt.Println("-------", out)
+		})
+	}
+}
+```
+### Refactor for Dependency Injection
+
+The Go testing framework doesn't have built-in mocking, but you can design your code to allow mocking by using interfaces and dependency injection.
+
+```go
+package svc
+
+import (
+	"fmt"
+)
+
+type MyService struct {
+	InnerF func(s string) string
+}
+
+func NewService(innerF func(s string) string) *MyService {
+	return &MyService{
+		InnerF: innerF,
+	}
+}
+func (m *MyService) MyService(s string) string {
+	fmt.Println("I am the Service")
+	out := m.InnerF(s)
+	fmt.Println("Service is Done")
+	return out
+}
+```
+```go
+package main
+
+package tests
+
+import (
+	"fmt"
+	"testing"
+	"tests/svc"
+)
+
+func TestMyService(t *testing.T) {
+	mockInnerF := func(s string) string {
+		return "Mocked By me " + s
+	}
+	// mockInnerF = myUtils.InnerF
+
+	t.Run("Mocked Test", func(t *testing.T) {
+		s := svc.NewService(mockInnerF)
+		out := s.MyService("Goal")
+		fmt.Println(out)
+	})
+}
+
+```
+
+### Testify Mocking
+
+Testify is a popular testing toolkit for Go. You can use its mock functionality to mock the function behavior directly within the test, even though it’s not ideal without dependency injection.
+```go
+package svc
+
+import (
+	"fmt"
+)
+
+type InnerFContract interface {
+	InnerF(s string) string
+}
+
+func MyService(s string, innerF InnerFContract) string {
+	fmt.Println("I am the Service")
+	out := innerF.InnerF(s)
+	fmt.Println("Service is Done")
+	return out
+}
+
+```
+
+```go
+package tests
+
+import (
+	"fmt"
+	"testing"
+	"tests/svc"
+
+	"github.com/stretchr/testify/mock"
+)
+
+type MockUtils struct {
+	mock.Mock
+}
+
+func (mock MockUtils) InnerF(s string) string {
+	args := mock.Called(s)
+	lop := args.String(0)
+	return lop
+}
+
+func TestMyService(t *testing.T) {
+	mu := new(MockUtils)
+	mu.On("InnerF", "Goal").Return("MMMMMocked by Me")
+	out := svc.MyService("Goal", mu)
+	fmt.Println(out)
+}
+
+```
+
 ## RabbitMQ Simplified Overview
 
 ## 1. What is RabbitMQ?
