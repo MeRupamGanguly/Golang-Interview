@@ -777,6 +777,151 @@ func TestMyService(t *testing.T) {
 
 ```
 
+Mocking Example:-
+
+```go
+package domain
+
+type BaseEvent interface {
+	GetRequestID() string
+}
+
+type EventContracts interface {
+	List(eventIDs []string) error
+	Get(event BaseEvent) error
+}
+
+```
+
+```go
+package utils
+
+type BaseE struct {
+}
+
+func NewBaseEvenets() *BaseE {
+	return &BaseE{}
+}
+func (b *BaseE) GetRequestID() string {
+	return "Utils.BaseE.GetRequestID"
+}
+
+```
+
+```go
+package package1
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"test/domain"
+	"test/utils"
+)
+
+type MyService struct {
+	Broker domain.EventContracts
+	User   string
+}
+
+func (svc *MyService) GetBroker() (domain.EventContracts, error) {
+	if svc.Broker != nil {
+		return svc.Broker, nil
+	}
+	return nil, errors.New("broker Not Found")
+}
+
+func (svc *MyService) Publish(ctx context.Context, status int) error {
+	if svc.Broker == nil {
+		return errors.New("broker Not Found")
+	}
+	ctxReqID, _ := ctx.Value(0).(string)
+	fmt.Println(ctxReqID)
+	out := utils.NewBaseEvenets()
+	err := svc.Broker.Get(out)
+	return err
+}
+
+```
+
+```go
+package tests
+
+import (
+	"context"
+	"fmt"
+	"test/domain"
+	"test/package1"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+type MockBaseEvent struct {
+	mock.Mock
+}
+
+func (mock *MockBaseEvent) Get(event domain.BaseEvent) error {
+	fmt.Println("MockBaseEvent Get Called")
+	args := mock.Called(event)
+	out := args.Error(0)
+	fmt.Println("out", out)
+	return out
+}
+func (mock *MockBaseEvent) List(eventIDs []string) error {
+	fmt.Println("MockBaseEvent List Called")
+	args := mock.Called(eventIDs)
+	out := args.Error(0)
+	fmt.Println("out", out)
+	return out
+}
+func TestMyServiceGetBroker(t *testing.T) {
+	t.Run("No Error Get Broker", func(t *testing.T) {
+		mockBaseEvent := new(MockBaseEvent)
+		svc := package1.MyService{
+			Broker: mockBaseEvent,
+		}
+		outGetBroker, err := svc.GetBroker()
+		assert.NoError(t, err)
+		fmt.Println("----", mockBaseEvent, "-:-", outGetBroker)
+		assert.Equal(t, mockBaseEvent, outGetBroker)
+	})
+	t.Run("Error Get Broker", func(t *testing.T) {
+		svc := package1.MyService{
+			Broker: nil,
+		}
+		outGetBroker, err := svc.GetBroker()
+		fmt.Println("----", outGetBroker)
+		assert.Error(t, err)
+		assert.Nil(t, outGetBroker)
+	})
+}
+
+func TestPublish(t *testing.T) {
+	t.Run("No Error Publish", func(t *testing.T) {
+		mockBaseEvent := new(MockBaseEvent)
+		svc := package1.MyService{
+			Broker: mockBaseEvent,
+		}
+		ctx := context.WithValue(context.Background(), 0, "my Mocked ID")
+		mockBaseEvent.On("Get", mock.Anything).Return(nil)
+		err := svc.Publish(ctx, 0)
+		assert.NoError(t, err)
+	})
+	t.Run("Error Publish", func(t *testing.T) {
+		svc := package1.MyService{
+			Broker: nil,
+		}
+		ctx := context.WithValue(context.Background(), 0, "my Mocked ID")
+		err := svc.Publish(ctx, 0)
+		assert.Error(t, err)
+	})
+}
+
+```
+
+
 ## RabbitMQ Simplified Overview
 
 ## 1. What is RabbitMQ?
